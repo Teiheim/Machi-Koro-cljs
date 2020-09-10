@@ -4,11 +4,12 @@
 
 ;Create Game ----------------------------------------------
 
+; Create Deck with cards and quantities
 (defn create-deck
   []
-  ;["Wheat Field","Wheat Field","Wheat Field","Wheat Field","Wheat Field","Wheat Field","Ranch","Ranch","Ranch","Ranch","Ranch","Ranch","Forest","Forest","Forest","Forest","Forest","Forest","Mine","Mine","Mine","Mine","Mine","Mine","Apple Orchard","Apple Orchard","Apple Orchard","Apple Orchard","Apple Orchard","Apple Orchard","Apple Orchard","Bakery","Bakery","Bakery","Bakery","Bakery","Bakery","Convenience Store","Convenience Store","Convenience Store","Convenience Store","Convenience Store","Convenience Store","Convenience Store","Convenience Store","Cheese Factory","Cheese Factory","Cheese Factory","Cheese Factory","Cheese Factory","Cheese Factory","Furniture Factory","Furniture Factory","Furniture Factory","Furniture Factory","Furniture Factory","Furniture Factory","Fruit and Vegetable Market","Fruit and Vegetable Market","Fruit and Vegetable Market","Fruit and Vegetable Market","Fruit and Vegetable Market","Fruit and Vegetable Market","Café","Café","Café","Café","Café","Café","Family Restaurant","Family Restaurant","Family Restaurant","Family Restaurant","Family Restaurant","Family Restaurant","Family Restaurant","Stadium","Stadium","Stadium","Stadium","TV Station","TV Station","TV Station","TV Station","Business Center","Business Center","Business Center","Business Center"]
-  {"Wheat Field" 6 "Ranch" 6 "Forest" 6 "Mine" 6 "Apple Orchard" 6 "Bakery" 6 "Convenience Store" 6 "Cheese Factory" 6 "Furniture Factory" 6 "Fruit and Vegetable Market" 6 "Cafe" 6 "Family Restaurant" 6 "Stadium" 4 "TV Station" 4 "Business Center" 4})
+    {"Wheat Field" 6 "Ranch" 6 "Forest" 6 "Mine" 6 "Apple Orchard" 6 "Bakery" 6 "Convenience Store" 6 "Cheese Factory" 6 "Furniture Factory" 6 "Fruit and Vegetable Market" 6 "Cafe" 6 "Family Restaurant" 6 "Stadium" 4 "TV Station" 4 "Business Center" 4})
 
+; Create empty state
 (defn create-game
   [players]
   (if (< (count players) 2)
@@ -33,6 +34,8 @@
                                          :landmarks #{}})]
         (assoc game :players pl))))
     {:card-stack [] :player-in-turn 1 :deck (create-deck) :players []} players )))
+
+;Get different specific information from state --------------------------------------
 
 (defn get-player-in-turn
   [game]
@@ -59,15 +62,6 @@
 (defn get-players
   [game]
   (get game :players))
-
-
-
-;TODO Change how to get a specific player
-;Access Game Elements--------------------------------------
-
-(defn swap-values
-  [game key val]
-  "Nothing")
 
 (defn get-turn
   [turn]
@@ -97,29 +91,32 @@
   [game player]
   (get-in  game [:players 0]))
 
+(defn get-cards-from-game
+  [game]
+  (println (str "cat game: " game))
+  (reduce
+   (fn [stack pcards] (into (concat stack (reduce
+                                           (fn [card-stack card]
+
+                                             (do
+                                               (println (str card-stack))
+                                               (println  card)
+                                               (println (str "Cat test amount: " (get-in card [1 :amount])))
+                                               (println (str "Cat test repeat: " (repeat (get-in card [1 :amount]) [(get pcards :position),card])))
+                                               (println (str "Cat test card stack make: " (into [] (concat card-stack (into [] (repeat (get-in card [1 :amount]) [(get pcards :position),card])) ))))
+                                               (into [] (concat card-stack (into [] (repeat (get-in card [1 :amount]) [(get pcards :position),card])) )))) [] (get pcards :cards)))) ) [] (get game :players)))
+(defn get-card-stack
+  [game]
+  (get game :card-stack))
+
 (defn purple?
   [game player purple]
   (if (= "p" (get (get-card purple) :color)) (contains? (get-in game [:players player :cards]) purple) false))
 
-(defn remove-add-cash-from-player
-  [game player amt]
-  (do
-   (println (str "Remove add Cash from: " player))
-  (update-in game [:players player :money] + amt)))
 
 (defn get-players-with-position
   [game]
   (reduce (fn [stack player] (conj stack ((get player :position),player))) [] game))
-
-(defn get-cards-from-game
-  [game]
-  (reduce
-   (fn [stack pcards] (into (concat stack (reduce
-                                            (fn [card-stack card] (for [_ (get card :amount)]
-                                                                   (conj card-stack [(get pcards :position),card] ))) [] (get pcards :cards)))) ) [] (get game :players)))
-(defn get-card-stack
-  [game]
-  (get game :card-stack))
 
 (defn activate?
   [card dice]
@@ -138,7 +135,28 @@
         true
         false))))
 
+(defn bread-card?
+  [card-name]
+  (or (= "Bakery" card-name) (= "Convenience Store" card-name)))
+
+(defn can-buy?
+  [game player card-name]
+  (if (and (not (purple? game player card-name)) (>= (get-in game [:players player :money]) (get (get-card card-name) :cost)))
+    true
+    false))
+
+(defn can-buy-landmark?
+  [game player card-name]
+  (if (and (not (landmark? game player card-name)) (>= (get-in game [:players player :money]) (get-in cards/machi-landmarks [card-name :cost])))
+    true
+    false))
 ;Return new altered state from the initial state -------------
+
+(defn remove-add-cash-from-player
+  [game player amt]
+  (do
+   (println (str "Remove add Cash from: " player))
+  (update-in game [:players player :money] + amt)))
 
 (defn card-to-player
   [game player card-name]
@@ -174,10 +192,6 @@
 ;   ([stack dst amt]))
 
 ;(defn activation?)
-(defn bread-card?
-  [card-name]
-  (or (= "Bakery" card-name) (= "Convenience Store" card-name)))
-
 
 (defn create-card-stack
   [game player d1 d2]
@@ -197,12 +211,12 @@
             q (println (str "Green Card Activate?: " (activate? card (+ d1 d2))))
             money (get-in card [1 1 :coin])]
       (cond
-        (and (= col "r") (activate? card (+ d1 d2))) (as-> game g
+        (and (= col "r") (activate? card (+ d1 d2)) (not= pit (get card 0))) (as-> game g
                           (add-to-card-stack g (get card 1) (get card 0))
                           (remove-add-cash-from-player g pit (if mall
                                                                                       (- (+ money 1))
                                                                                       (- money)))
-                          (remove-add-cash-from-player g (- (get card 0) 1) (if mall
+                          (remove-add-cash-from-player g (get card 0) (if mall
                                                                                       (+ money 1)
                                                                                       money)))
         ;Fix the one below
@@ -214,30 +228,16 @@
         (and (= col "g") (= (get card 0) player) (activate? card (+ d1 d2))) (-> game
                                                                               (add-to-card-stack (get card 1) (get card 0))
                                                                               (remove-add-cash-from-player pit money))
-        (and (= col "p") (= player (get game :player-in-turn)) (activate? card (+ d1 d2))) (let [pn  (reduce (fn [stack p] (conj stack (- (get p :position) 1))) [] (get game :players))]
+        (and (= col "p") (= player (get game :player-in-turn)) (activate? card (+ d1 d2))) (let [pn  (reduce (fn [stack p] (conj stack (get p :position))) [] (get game :players))]
                                                                   (as-> game ga
                                                                         (add-to-card-stack ga (get card 1) (get card 0))
                                                                         (reduce (fn [g p] (remove-add-cash-from-player g p money)) ga pn)
-                                                                        (remove-add-cash-from-player game pit (* (+ (count (get ga :players)) 1) money))))
+                                                                        (remove-add-cash-from-player game (- pit 1) (* (- (count (get ga :players)) 1) money))))
         :else game))) game cards)))
 
 (defn add-landmark
   [game player landmark]
   (update-in game [:players player :landmarks] conj landmark))
-
-
-(defn can-buy?
-  [game player card-name]
-  (if (and (not (purple? game player card-name)) (>= (get-in game [:players player :money]) (get (get-card card-name) :cost)))
-    true
-    false))
-
-(defn can-buy-landmark?
-  [game player card-name]
-  (if (and (not (landmark? game player card-name)) (>= (get-in game [:players player :money]) (get-in cards/machi-landmarks [card-name :cost])))
-    true
-    false))
-
 
 
 (defn switch-turn

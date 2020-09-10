@@ -19,6 +19,9 @@
 ; (defonce app-state
 ;   (r/atom app-state (util/create-game [[1,"Chad"],[2,"Tad"],[3,"Brad"]])))
 
+
+;@TODO Combine Atoms into a single atom and add methods to alter specific portions of it
+;Atoms Defined
 (defonce app-state
   (r/atom {}))
 
@@ -62,15 +65,7 @@
       [:button#open-deck {:on-click "open-deck"} "Open-Deck"]
       [:button#end-turn {:on-click "end-turn"} "End Turn"]]])
 
-;(use 'clojure.test)
-; (hiccups/defhtml make-card
-;   [card card-name]
-;   [:div {:class (str "class " (get card :color))}
-;    [:p.card-name card-name]
-;    [:p.amount (get card :amount)]
-;    [:p.worth (apply str (get card :activation))]
-;    [:p.coin (get card :coin)]])
-
+;;Dice Roll Logic for changing atoms based on roll
 (defn roll-dice
   []
   (js/console.log (rand-nth [1 2 3 4 5 6]))
@@ -155,6 +150,10 @@
   [])
 
 ;;End Buttons for player
+
+
+;;Side effects for state
+;@TODO Reorgnize
 
 (defn next-phase
   ([]
@@ -290,7 +289,8 @@
   (reset! turn 1))
   ;(. js/$ "#openSwitchCards" -modal "hide")
 
-
+;MAIN PLAYER COMPONENTS ---------------------------------------
+;@TODO Reorgnize Components after studying how components work
 (defn switch-cards-p
   []
   (let [p (r/atom {:op-deck 5
@@ -378,112 +378,112 @@
    [:div.modal-dialog.modal-lg
     [:div#switchCardsTarget.modal-content
      (switch-cards-p)]]])
+
 (defonce start-app
   (r/atom true))
      (defn setup-game
        [players]
        ;(reduce (fn [new orig] (if (not (= "" players)) (conj new orig))) [] players)
        ;(js/console.log (str "Game PLayers: " (remove "" players)))
-       (js/console.log (str "Game: " (util/create-game (take 3 players))))
-       (reset! app-state (util/create-game (take 3 players)))
+       (js/console.log (str "Game: " (util/create-game (into [] (filter (fn [item] (not= "" item)) players)))))
+       (js/console.log (str "Game: " (into [] (filter (fn [item] (not= "" (get item 1))) players))))
+       (reset! app-state (util/create-game (into [] (filter (fn [item] (not= "" (get item 1))) players))))
        (reset! start-app false)
        (r/force-update-all))
 
 
-     (defn start
-       [s]
-       (let [create (r/atom [[0 ""] [1 ""] [2 ""] [3 ""]])]
+(defn start
+ [s]
+ (let [create (r/atom [[0 ""] [1 ""] [2 ""] [3 ""]])]
 
-       (fn [s]
-         (cond
-        (= @app-state {}) [:div#start-game
-         [:div#game-info
-         [:div#game-form
-          [:h2 "Machi Koro"]
-         [:div.row
-          [:div.col [:label "Player 1"][:input {:type :text :value (get-in @create [0 1]) :on-change (fn [e]
-                                                                                           (reset! create (assoc-in @create [0 1] (-> e .-target .-value))))}]]
-         [:div.col [:label "Player 2"][:input {:type :text :value (get-in @create [1 1]) :on-change (fn [e]
-                                                                                           (reset! create (assoc-in @create [1 1] (-> e .-target .-value))))}]]
-         [:div.col [:label "Player 3"][:input {:type :text :value (get-in @create [2 1]) :on-change (fn [e]
-                                                                                           (reset! create (assoc-in @create [2 1] (-> e .-target .-value))))}]]
-         [:div.col [:label "Player 4"][:input {:type :text :value (get-in @create [3 1]) :on-change (fn [e]
-                                                                                           (reset! create (assoc-in @create [3 1] (-> e .-target .-value))))}]]]
-          [:button.btn.btn-dark.start-game {:on-click #(setup-game @create)} "Start Game"]]]]
-           (not (= @app-state {})) nil))))
+ (fn [s]
+   (cond
+  (= @app-state {}) [:div#start-game
+   [:div#game-info
+   [:div#game-form
+    [:h2 "Machi Koro"]
+   [:div.row
+    [:div.col [:label "Player 1"][:input {:type :text :value (get-in @create [0 1]) :on-change (fn [e]
+                                                                                     (reset! create (assoc-in @create [0 1] (-> e .-target .-value))))}]]
+   [:div.col [:label "Player 2"][:input {:type :text :value (get-in @create [1 1]) :on-change (fn [e]
+                                                                                     (reset! create (assoc-in @create [1 1] (-> e .-target .-value))))}]]
+   [:div.col [:label "Player 3"][:input {:type :text :value (get-in @create [2 1]) :on-change (fn [e]
+                                                                                     (reset! create (assoc-in @create [2 1] (-> e .-target .-value))))}]]
+   [:div.col [:label "Player 4"][:input {:type :text :value (get-in @create [3 1]) :on-change (fn [e]
+                                                                                     (reset! create (assoc-in @create [3 1] (-> e .-target .-value))))}]]]
+    [:button.btn.btn-dark.start-game {:on-click #(setup-game @create)} "Start Game"]]]]
+     (not (= @app-state {})) nil))))
 
-     (defn  mainapp []
-       [:<>
-        [:div#start]
+(defn  mainapp []
+ [:<>
+  [:div#start]
 
-        (if (get @winner 0)
-         [:div.alert.alert-primary {:role "alert"}   [:h2 (str (util/get-player-name @app-state (get @winner 1)) " has won the game!")]]
-         )
-
-
-        [:div#main-game-container
+  (if (get @winner 0)
+   [:div.alert.alert-primary {:role "alert"}   [:h2 (str (util/get-player-name @app-state (get @winner 1)) " has won the game!")]]
+   )
 
 
-         [:h1 "Machi Koro Online!"]
-         [:h3#pt (str "Player's Turn: " (get @app-state :player-in-turn))]
-         [:div.row.player-money
-          [:div.col
-           [:p (str (util/get-player-name @app-state 1) "'s Money: " (util/get-player-money @app-state 0))]]
-          [:div.col
-           [:p (str (util/get-player-name @app-state 2) "'s Money: " (util/get-player-money @app-state 1))]]
-          [:div.col
-           [:p (str (util/get-player-name @app-state 3) "'s Money: " (util/get-player-money @app-state 2))]]
-          [:div.col
-           [:p (str (util/get-player-name @app-state 4) "'s Money: " (util/get-player-money @app-state 3))]]]
-         [:div#game.container-fluid
-           [:div.row
-            ;[:div#p1.player.col.col-sm-6 (player-cards 0)]
-             [:div#p1.player.col.col-sm-6
-              (player-cards 0)]
-             [:div#p2.player.col.com-sm-6
-              (player-cards 1)]]
-           [:div.row
-             [:div#p3.player.col.col-sm-6
-              (player-cards 2)]
-             [:div#p4.player.col.col-sm-6
-              (player-cards 3)]]
-
-             (cond
-               (= (count @dice ) 1) [:div#dice [:p#dicetext (get @dice 0)]]
-               (= (count @dice ) 2) [:div#dbldice-cont [:div.dbldice [:p#dicetext (get @dice 0)]]
-                                    [:div.dbldice [:p#dicetext.dice-2 (get @dice 1)]]])
-          [:div.control-block
-           (next-phase @turn)]]]
-           [:div#openDeck.modal.bd-example-modal-lg {:tabIndex "-1" :role "dialog" :aria-labelledby "mySmallModalLabel" :aria-hidden "true"}
-            [:div.modal-dialog.modal-lg
-             [:div.modal-content
-              [:div#player-shop-info
-               [:h3.deck-player-info (str "Player " (get @app-state :player-in-turn) " Money: " (util/get-player-money @app-state (- (get @app-state :player-in-turn) 1)))]]
-              [:div#deck
-               (for [d (into [] (get @app-state :deck))]
-                 [:button {:class (str "deck-card-info text-white mb-3 card " (get (util/get-card (get d 0)) :color) " " (if (util/can-buy? @app-state (- (get @app-state :player-in-turn) 1) (get d 0)) "can-buy" "")) :on-click #(card-candidate (get d 0))}
-                  [:div.card-header
-                   [:p.deck-card-name (get d 0)]
-                   [:p.other-deck-card-info (str "Amount in Deck: " (get d 1) ", Cost: " (get (util/get-card (get d 0)) :cost) ", Activation: " (get (util/get-card (get d 0)) :activation))]]])]]]]
-           [:div#openLandmarks.modal.bd-example-modal-lg {:tabIndex "-1" :role "dialog" :aria-labelledby "mySmallModalLabel" :aria-hidden "true"}
-            [:div.modal-dialog.modal-lg
-             [:div.modal-content
-              [:div#player-shop-info
-               [:h3.deck-player-info (str "Player " (get @app-state :player-in-turn) " Money: " (util/get-player-money @app-state (- (get @app-state :player-in-turn) 1)))]]
-              [:div#deckLandmarks
-               (for [l (into [] cards/machi-landmarks)]
-                 [:button {:class (str "deck-card-info text-white mb-3 card gold " (if (and (not (util/landmark? @app-state (- (get @app-state :player-in-turn) 1) (get l 0) )) (util/can-buy-landmark? @app-state (- (get @app-state :player-in-turn) 1) (get l 0))) "can-buy" "")) :on-click #(landmark-candidate (get l 0))}
-                  (str (get l 0) ", Cost: " (get-in l [1 :cost]) " Money")])]]]]
-                  (switch-cards-container)
-              [:div#game-info-container
-               [:div#card-activated
-                 [:h3 "Cards Activated"]
-                 (activated-cards)]
-               [:div#landmarks
-                [:h3 "Landmarks"]
-                (landmarks)]]])
+  [:div#main-game-container
 
 
+   [:h1 "Machi Koro Online!"]
+   [:h3#pt (str "Player's Turn: " (get @app-state :player-in-turn))]
+   [:div.row.player-money
+    [:div.col
+     [:p (str (util/get-player-name @app-state 1) "'s Money: " (util/get-player-money @app-state 0))]]
+    [:div.col
+     [:p (str (util/get-player-name @app-state 2) "'s Money: " (util/get-player-money @app-state 1))]]
+    [:div.col
+     [:p (str (util/get-player-name @app-state 3) "'s Money: " (util/get-player-money @app-state 2))]]
+    [:div.col
+     [:p (str (util/get-player-name @app-state 4) "'s Money: " (util/get-player-money @app-state 3))]]]
+   [:div#game.container-fluid
+     [:div.row
+      ;[:div#p1.player.col.col-sm-6 (player-cards 0)]
+       [:div#p1.player.col.col-sm-6
+        (player-cards 0)]
+       [:div#p2.player.col.com-sm-6
+        (player-cards 1)]]
+     [:div.row
+       [:div#p3.player.col.col-sm-6
+        (player-cards 2)]
+       [:div#p4.player.col.col-sm-6
+        (player-cards 3)]]
+
+       (cond
+         (= (count @dice ) 1) [:div#dice [:p#dicetext (get @dice 0)]]
+         (= (count @dice ) 2) [:div#dbldice-cont [:div.dbldice [:p#dicetext (get @dice 0)]]
+                              [:div.dbldice [:p#dicetext.dice-2 (get @dice 1)]]])
+    [:div.control-block
+     (next-phase @turn)]]]
+     [:div#openDeck.modal.bd-example-modal-lg {:tabIndex "-1" :role "dialog" :aria-labelledby "mySmallModalLabel" :aria-hidden "true"}
+      [:div.modal-dialog.modal-lg
+       [:div.modal-content
+        [:div#player-shop-info
+         [:h3.deck-player-info (str "Player " (get @app-state :player-in-turn) " Money: " (util/get-player-money @app-state (- (get @app-state :player-in-turn) 1)))]]
+        [:div#deck
+         (for [d (into [] (get @app-state :deck))]
+           [:button {:class (str "deck-card-info text-white mb-3 card " (get (util/get-card (get d 0)) :color) " " (if (util/can-buy? @app-state (- (get @app-state :player-in-turn) 1) (get d 0)) "can-buy" "")) :on-click #(card-candidate (get d 0))}
+            [:div.card-header
+             [:p.deck-card-name (get d 0)]
+             [:p.other-deck-card-info (str "Amount in Deck: " (get d 1) ", Cost: " (get (util/get-card (get d 0)) :cost) ", Activation: " (get (util/get-card (get d 0)) :activation))]]])]]]]
+     [:div#openLandmarks.modal.bd-example-modal-lg {:tabIndex "-1" :role "dialog" :aria-labelledby "mySmallModalLabel" :aria-hidden "true"}
+      [:div.modal-dialog.modal-lg
+       [:div.modal-content
+        [:div#player-shop-info
+         [:h3.deck-player-info (str "Player " (get @app-state :player-in-turn) " Money: " (util/get-player-money @app-state (- (get @app-state :player-in-turn) 1)))]]
+        [:div#deckLandmarks
+         (for [l (into [] cards/machi-landmarks)]
+           [:button {:class (str "deck-card-info text-white mb-3 card gold " (if (and (not (util/landmark? @app-state (- (get @app-state :player-in-turn) 1) (get l 0) )) (util/can-buy-landmark? @app-state (- (get @app-state :player-in-turn) 1) (get l 0))) "can-buy" "")) :on-click #(landmark-candidate (get l 0))}
+            (str (get l 0) ", Cost: " (get-in l [1 :cost]) " Money")])]]]]
+            (switch-cards-container)
+        [:div#game-info-container
+         [:div#card-activated
+           [:h3 "Cards Activated"]
+           (activated-cards)]
+         [:div#landmarks
+          [:h3 "Landmarks"]
+          (landmarks)]]])
 
 (defn game
   []
@@ -493,15 +493,12 @@
             (mainapp))))
 
 
+;Initialize Components
 (defn ^:export init []
-(js/console.log (str "Prove Him Wrong: " (util/create-game ["a" "b" "c" "d"])))
 (tests/mtest)
-(js/console.log (str (player-cards 0) "PLAYER CARDS"))
 ;;(js/console.log (str (mainapp) "MAIN"))
 ;(set-app-state)
 ;(reset! turn 5)
-(js/console.log (str "DOES LANDMARK? WORK???: " (util/add-landmark @app-state 0 "Train Station")))
-(js/console.log (str "DOES LANDMARK? WORK???: " (util/landmark? (util/add-landmark @app-state 0 "Train Station") 0 "Train Station")))
 ;(run-game)
 (r/render-component [mainapp]
                     (. js/document (getElementById "app")))
@@ -516,19 +513,10 @@
   ;(reset! app-state (machi.util/create-game [[1,"Chad"],[2,"Tad"]]))
   )
 
-(hiccups/defhtml my-template []
-  [:div
-    [:a {:href "https://github.com/weavejester/hiccup"}
-      "Hiccup"]])
-
-
-
 
 ;HTML FORMAT - CHECK HICCUP
 ;<div class="card blue"><div class="card-inner"><p class="card-name">Wheat-Field</p><p class="worth">1</p><p class="coin">1</p></div></div>
 
-(defn hic []
-  (js/window.alert (my-template)))
 ;(run-tests 'machi.util)
 
 ;clj --main cljs.main --compile machi.core --repl
