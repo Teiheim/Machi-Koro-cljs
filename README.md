@@ -42,4 +42,5 @@ yarn release || npm run release
 - Reorganize code so that like functions are grouped together and it is easier to read
 - Put all atoms into a single atom
 - add more descriptive comments
+- Fix/expand testing
 - Import Sente and begin refactoring code so that multiple people may play at once on different computers
